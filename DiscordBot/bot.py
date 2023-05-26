@@ -9,6 +9,7 @@ import requests
 from report import Report
 import pdb
 from discord.ext import context
+from handle import Handle
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -94,13 +95,19 @@ class ModBot(context.ContextClient, discord.Client):
         author_id = message.author.id
         responses = []
 
-        # Only respond to messages if they're part of a reporting flow
-        if author_id not in self.reports and not message.content.startswith(Report.START_KEYWORD):
+        print(message.content.startswith(Handle.START_KEYWORD))
+        if message.content.startswith(Handle.START_KEYWORD):
+            handle = Handle(self)
+            await handle.handle_message(message)
             return
 
-        # If we don't currently have an active report for this user, add one
-        if author_id not in self.reports:
-            self.reports[author_id] = Report(self)
+        # # Only respond to messages if they're part of a reporting flow
+        # if author_id not in self.reports and not message.content.startswith(Report.START_KEYWORD):
+        #     return
+
+        # # If we don't currently have an active report for this user, add one
+        # if author_id not in self.reports:
+        self.reports[author_id] = Report(self)
 
         ## Let the report class handle this message
         report = await self.reports[author_id].handle_message(message)

@@ -2,9 +2,11 @@ from enum import Enum, auto
 import discord
 import re
 from discord.ext.context import ctx
+
 from question_templates.block_or_mute import BlockOrMute, BlockOrMuteType
 from question_templates.checking_spam import CheckingSpam, SpamRequestType
 from question_templates.report_reason import ReportReason, ReportType
+
 from message_util import next_message
 
 
@@ -30,7 +32,7 @@ class State(Enum):
     REPORT_CANCELED = auto()
 
 class Report:
-    START_KEYWORD = "report"
+    START_KEYWORD = "handle"
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
 
