@@ -2,20 +2,23 @@ from pymongo import MongoClient
 import json
 import os
 
-# MONGO_PW = os.getenv("MONGO_PASS")
-MONGO_HOST = "localhost"
+# TODO: set up external database connection
+# (will probably need to stand up a Mongo instance on our GCP VM)
+
+MONGO_USER = "cs152-db-user"
+MONGO_PW = os.getenv("MONGO_PASS")
+MONGO_HOST = "34.168.145.109"
 MONGO_PORT = 27017
 
 def insert_record(connection_name: str, document):
-    # connection_string = f"mongo"
-    client = MongoClient(MONGO_HOST, MONGO_PORT)
+    client = MongoClient(host=MONGO_HOST, port=MONGO_PORT, username=MONGO_USER, password=MONGO_PW)    
     db = client.discord_db
     collection = db[connection_name]
 
     collection.insert_one(document)
 
 def find_bad_faith_reports(reporter_id: str):
-    client = MongoClient(MONGO_HOST, MONGO_PORT)
+    client = MongoClient(host=MONGO_HOST, port=MONGO_PORT, username=MONGO_USER, password=MONGO_PW)    
     db = client.discord_db
     collection = db["bad_faith_reports"]
     bad_faith_reports = collection.find({
