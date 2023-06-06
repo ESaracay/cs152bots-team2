@@ -4,11 +4,13 @@ import discord
 import re
 from discord.ext.context import ctx
 from message_util import next_message
+from mongo_client import insert_record
 from report import ModerationRequest 
 from question_templates.checking_scam import CheckingScam, ScamRequestType
 from question_templates.reliable_report import ReportIsReliable, ReportReliability
 from question_templates.impersonation import Impersonation, ImpersonationType
 
+from datetime import datetime
 import json
 import logging
 import uuid
@@ -59,6 +61,28 @@ class Moderation_Flow:
         self.impersonated = ""
         self.scam_type = ""
         self.incident_id = str(uuid.uuid4())
+    
+    def insert_moderation_report(self):
+        if self.state != State.COMPLETE:
+            return
+        
+        persistent_dump = {
+                "incident_id": self.incident_id,
+                "incident_author": self.author.name,
+                "incident_author_display_name": self.author.display_name,
+                "incident_author_id": str(self.author.id),
+                "incident_timestamp": str(self.message.created_at),
+                "message_text": self.message.content,
+                "incident_scam_score": self.scam_score,
+                "impersonated_party": self.impersonated,
+                # "impersonation_type": self.impersonation_type
+            }
+        jsonified = json.dumps(persistent_dump)
+        insert_record("moderation_reports", persistent_dump)
+        logger.debug(jsonified)
+        print("Logged report:", jsonified)
+        print("Done!")
+
     
     async def handle_moderation_report(self):
         '''
@@ -171,19 +195,7 @@ class Moderation_Flow:
             self.state = State.COMPLETE
 
         if self.state == State.COMPLETE:
-            persistent_dump = {
-                "incident_id": self.incident_id,
-                "incident_author": self.author.name,
-                "incident_author_display_name": self.author.display_name,
-                "message_text": self.message.content,
-                "incident_scam_score": self.scam_score,
-                "impersonated_party": self.impersonated,
-                # "impersonation_type": self.impersonation_type
-            }
-            jsonified = json.dumps(persistent_dump)
-            logger.debug(jsonified)
-            print("Logged report:", jsonified)
-            print("Done!")
+            self.insert_moderation_report()
 
 
     async def send_warning_message(self):
