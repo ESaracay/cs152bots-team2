@@ -43,7 +43,7 @@ class ReportType(Enum):
 
 class Moderation_Flow:
 
-    def __init__(self, message: discord.Message, mod_channel, automated=False, scam_score=0):
+    def __init__(self, message: discord.Message, mod_channel, automated=False, scam_score=0, reporter_id=0):
         if automated:
             self.state = State.GOOD_FAITH
             self.report_type = ReportType.AUTOMATED
@@ -61,6 +61,7 @@ class Moderation_Flow:
         self.impersonated = ""
         self.scam_type = ""
         self.incident_id = str(uuid.uuid4())
+        self.reporter_id = reporter_id
     
     def insert_moderation_report(self):
         if self.state != State.COMPLETE:
@@ -72,12 +73,14 @@ class Moderation_Flow:
                 "incident_author_display_name": self.author.display_name,
                 "incident_author_id": str(self.author.id),
                 "incident_timestamp": str(self.message.created_at),
+                "incident_reporter_id": str(self.reporter_id),
                 "message_text": self.message.content,
                 "incident_scam_score": self.scam_score,
                 "impersonated_party": self.impersonated,
                 # "impersonation_type": self.impersonation_type
             }
         jsonified = json.dumps(persistent_dump)
+
         insert_record("moderation_reports", persistent_dump)
         logger.debug(jsonified)
         print("Logged report:", jsonified)

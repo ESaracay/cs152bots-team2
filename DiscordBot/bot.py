@@ -107,20 +107,21 @@ class ModBot(context.ContextClient, discord.Client):
             self.reports[author_id] = Report(self)
 
         ## Let the report class handle this message
-        report = await self.reports[author_id].handle_message(message)
+        mod_request = await self.reports[author_id].handle_message(message)
 
         # If the report is complete we want to send it to our 
         if self.reports[author_id].report_complete():
+            this_report = self.reports[author_id]
             self.reports.pop(author_id)
-            await self.send_report_to_mod_channel(report)
+            await self.send_report_to_mod_channel(mod_request, this_report)
 
     # Send report to moderation channel
-    async def send_report_to_mod_channel(self, report: ModerationRequest):
-        message = report.message
+    async def send_report_to_mod_channel(self, mod_request: ModerationRequest, report: Report):
+        message = mod_request.message
         mod_channel = self.mod_channels[message.guild.id]
-        await mod_channel.send(report.print_report())
-        print("sending to mod flow with score:", report.score)
-        mod_flow = Moderation_Flow(report.message, mod_channel, automated=False, scam_score=report.score)
+        await mod_channel.send(mod_request.print_report())
+        print("sending to mod flow with score:", mod_request.score)
+        mod_flow = Moderation_Flow(mod_request.message, mod_channel, automated=False, scam_score=mod_request.score, reporter_id=report.reporter_id)
         await mod_flow.handle_moderation_report()
         
 
