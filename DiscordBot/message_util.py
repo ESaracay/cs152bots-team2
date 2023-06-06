@@ -18,7 +18,7 @@ async def next_message(timeout=60, channel = "", retries=3):
         msg = await ctx.bot.wait_for('message', check=check, timeout= 60.0)
 
     except asyncio.TimeoutError:
-        await ctx.channel.send("No message was sent going to cancel report")
+        await ctx.channel.send("No message was sent. This report will be cancelled.")
         return None
     else:
         await ctx.channel.send("Recorded: " + msg.content)

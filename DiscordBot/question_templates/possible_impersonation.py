@@ -18,7 +18,7 @@ class PossibleImpersonation(discord.ui.View):
         await self.message.edit(view=self)
 
     async def on_timeout(self) -> None:
-        await self.message.channel.send("Timedout")
+        await self.message.channel.send("Timed out.")
         await self.disable_all_items()
 
 
@@ -36,7 +36,7 @@ class PossibleImpersonation(discord.ui.View):
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger)
     async def cancel_option(self, interaction, button):
-        await interaction.response.send_message("Leaving reporting flow")
+        await interaction.response.send_message("Leaving reporting flow.")
         self.report_type = IsImpersonation.CANCEL
         await self.disable_all_items()
         self.stop()

@@ -23,7 +23,7 @@ class CheckingScam(discord.ui.View):
         await self.message.edit(view=self)
 
     async def on_timeout(self) -> None:
-        await self.message.channel.send("Timedout")
+        await self.message.channel.send("Timed out.")
         await self.disable_all_items()
 
     @discord.ui.button(label="More Info", style=discord.ButtonStyle.gray)
