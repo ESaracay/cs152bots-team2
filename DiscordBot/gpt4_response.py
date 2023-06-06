@@ -5,10 +5,10 @@ import time
 openai.api_key = os.getenv("OPENAI_API_KEY")
 openai.organization = os.getenv("OPENAI_ORGANIZATION")
 
-def gpt4_warning(sms):
+def gpt4_warning(sms, retry = 10):
     #TODO: Do ten tries max
     gotAnswer = False
-    while gotAnswer == False: 
+    while gotAnswer == False and retry > 0: 
         try:
             response = openai.ChatCompletion.create(
                 model="gpt-4",
@@ -30,4 +30,6 @@ def gpt4_warning(sms):
             return answer
         except:
             print("Error, trying again") 
+            retry -= 1
             time.sleep(0.005)
+    return "⚠️ WARNING: The message you received may be a potential scam! ⚠️"
