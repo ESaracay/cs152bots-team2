@@ -121,8 +121,8 @@ class Moderation_Flow:
         '''
 
         await self.send_update_message(f'''Thank you for submitting your report. Our moderation team will begin reviewing this shortly.
-                                       For future reference, your report ID is: {self.incident_id}.
-                                       Our team will update you on the status of this report as soon as we can.''')
+                                       \nFor future reference, your report ID is: {self.incident_id}.
+                                       \nOur team will update you on the status of this report as soon as we can.''')
 
         if self.state == State.UNKNOWN_FAITH:
             await self.mod_channel.send("Did the user accurately follow the user reporting flow?")
