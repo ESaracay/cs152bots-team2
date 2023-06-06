@@ -10,6 +10,7 @@ class ImpersonationType(Enum):
     OTHER = auto()
     NEVERMIND = auto()
     CANCEL = auto()
+    DEFAULT = auto()
 
 # Here we give user different button options to identify the abuse type
 class Impersonation(discord.ui.View):
@@ -23,7 +24,7 @@ class Impersonation(discord.ui.View):
         await self.message.edit(view=self)
 
     async def on_timeout(self) -> None:
-        await self.message.channel.send("Timedout")
+        await self.message.channel.send("Timed out")
         await self.disable_all_items()
 
     async def get_additional_info(self):
@@ -70,21 +71,22 @@ class Impersonation(discord.ui.View):
     @discord.ui.button(label="Other", style=discord.ButtonStyle.blurple)
     async def other_option(self, interaction, button):
         await interaction.response.send_message("Please describe in brief who you think this user is impersonating.")
-        self.scam_type = ImpersonationType.OTHER
+        self.impersonation_type = ImpersonationType.OTHER
         await self.disable_all_items()
         await self.get_additional_info()
         self.stop()
 
-    @discord.ui.button(label="No Thanks", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="Not applicable", style=discord.ButtonStyle.blurple)
     async def none_option(self, interaction, button):
-        await interaction.response.send_message("Please describe in brief who you think this user is impersonating.")
-        self.scam_type = ImpersonationType.OTHER
+        await interaction.response.send_message("Thank you, we will review this interraction. Please reply to this message to continue.")
+        self.impersonation_type = ImpersonationType.NEVERMIND
         await self.disable_all_items()
+        # await self.get_additional_info()
         self.stop()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger)
     async def cancel_option(self, interaction, button):
         await interaction.response.send_message("Leaving reporting flow")
-        self.report_type = ImpersonationType.CANCEL
+        self.impersonation_type = ImpersonationType.CANCEL
         await self.disable_all_items()
         self.stop()

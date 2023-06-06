@@ -107,20 +107,22 @@ class ModBot(context.ContextClient, discord.Client):
             self.reports[author_id] = Report(self)
 
         ## Let the report class handle this message
-        report = await self.reports[author_id].handle_message(message)
+        mod_request = await self.reports[author_id].handle_message(message)
 
         # If the report is complete we want to send it to our 
         if self.reports[author_id].report_complete():
+            this_report = self.reports[author_id]
             self.reports.pop(author_id)
-            await self.send_report_to_mod_channel(report)
+            await self.send_report_to_mod_channel(mod_request, this_report)
 
     # Send report to moderation channel
-    async def send_report_to_mod_channel(self, report: ModerationRequest):
-        message = report.message
+    async def send_report_to_mod_channel(self, mod_request: ModerationRequest, report: Report):
+        message = mod_request.message
         mod_channel = self.mod_channels[message.guild.id]
-        await mod_channel.send(report.print_report())
-        mod_flow = Moderation_Flow(report.message, mod_channel)
-        mod_flow.handle_moderation_report()
+        await mod_channel.send(mod_request.print_report())
+        print("sending to mod flow with score:", mod_request.score)
+        mod_flow = Moderation_Flow(mod_request.message, mod_channel, automated=False, scam_score=mod_request.score, reporter_id=report.reporter_id)
+        await mod_flow.handle_moderation_report()
         
 
     async def check_channel_message(self, message):
@@ -136,6 +138,8 @@ class ModBot(context.ContextClient, discord.Client):
 
         mod_channel = self.mod_channels[message.guild.id]
         # Here we send the user a warning about why the message can be dangerous
+        prewarning_message = "This message has been flagged as a potential scam. Generating background information..."
+        await message.channel.send(prewarning_message, reference=message)
         warning = gpt4_warning(message.content) 
         print("Finished generating gpt4 response")
         warning_message = "This message may be a possible scam. Take the following information into consideration: \n" + warning
@@ -151,7 +155,7 @@ class ModBot(context.ContextClient, discord.Client):
             print_str += "Spam Score: " + str(spam_score) + "\n"
             await mod_channel.send(print_str)
             mod_flow = Moderation_Flow(message, mod_channel, True)
-            mod_flow.handle_moderation_report()
+            await mod_flow.handle_moderation_report()
             
 
     def eval_text(self, message):

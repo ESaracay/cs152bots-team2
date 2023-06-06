@@ -65,6 +65,7 @@ class Report:
         self.client = client
         self.message = None
         self.report = None
+        self.reporter_id = None # user_id for party initiating the report
     
     async def handle_message(self, message):
         '''
@@ -83,8 +84,9 @@ class Report:
             wait_for_message = True
             while (wait_for_message):
                 msg = await next_message()
+                self.reporter_id = str(msg.author.id)
                 if not msg or msg.content == self.CANCEL_KEYWORD:
-                    self.state == self.CANCEL_KEYWORD
+                    self.state = self.CANCEL_KEYWORD
                     return
                 # Parse out the three ID strings from the message link
                 m = re.search('/(\d+)/(\d+)/(\d+)', msg.content)
@@ -226,7 +228,7 @@ class Report:
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE or self.state == State.REPORT_CANCELED
 
-    def report_cancled(self):
+    def report_canceled(self):
         return self.state == State.REPORT_CANCELED
     
 
