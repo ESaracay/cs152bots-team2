@@ -65,6 +65,7 @@ class Report:
         self.client = client
         self.message = None
         self.report = None
+        self.reporter = None
         self.reporter_id = None # user_id for party initiating the report
     
     async def handle_message(self, message):
@@ -85,6 +86,7 @@ class Report:
             while (wait_for_message):
                 msg = await next_message()
                 self.reporter_id = str(msg.author.id)
+                self.reporter = msg.author
                 if not msg or msg.content == self.CANCEL_KEYWORD:
                     self.state = self.CANCEL_KEYWORD
                     return

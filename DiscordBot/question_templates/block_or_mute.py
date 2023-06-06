@@ -18,7 +18,7 @@ class BlockOrMute(discord.ui.View):
         await self.message.edit(view=self)
 
     async def on_timeout(self) -> None:
-        await self.message.channel.send("Timedout")
+        await self.message.channel.send("Timed out.")
 
     @discord.ui.button(label="MORE_INFO", style=discord.ButtonStyle.gray)
     async def other_option(self, interaction, button):

@@ -8,6 +8,7 @@ async def next_message(timeout=60, channel = "", retries=3):
     # this is how we seperate different people talking to the same bot
     def check(m: discord.Message):
         if channel != "":
+            print("Handling next_message from channel:", m.channel)
             return m.channel.name == channel and m.author.name != "Group 2 Bot"
             # return True
         else:
@@ -18,7 +19,7 @@ async def next_message(timeout=60, channel = "", retries=3):
         msg = await ctx.bot.wait_for('message', check=check, timeout= 60.0)
 
     except asyncio.TimeoutError:
-        await ctx.channel.send("No message was sent going to cancel report")
+        await ctx.channel.send("No message was sent. This report will be cancelled.")
         return None
     else:
         await ctx.channel.send("Recorded: " + msg.content)
