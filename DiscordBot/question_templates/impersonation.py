@@ -37,7 +37,7 @@ class Impersonation(discord.ui.View):
     @discord.ui.button(label="TechSupport", style=discord.ButtonStyle.blurple)
     async def tech_option(self, interaction, button):
         await interaction.response.send_message("Thank you for letting us know. Note that no tech support firm or IT departments will need to ask you for your password or any authentication information.")
-        await interaction.response.send_message("Please provide the name of the company they were claiming to be from.")
+        await interaction.followup.send("Please provide the name of the company they were claiming to be from.")
         self.impersonation_type = ImpersonationType.TECH_SUPPORT
         await self.disable_all_items()
         await self.get_additional_info()
@@ -60,9 +60,9 @@ class Impersonation(discord.ui.View):
         self.stop()
 
     @discord.ui.button(label="Someone I Know", style=discord.ButtonStyle.blurple)
-    async def someone_option(self, interaction, button):
+    async def someone_option(self, interaction: discord.Interaction, button):
         await interaction.response.send_message("Thank you for letting us know. If you're unsure if this user is actually someone you know, we recommend using another channel to confirm their claims.")
-        await interaction.response.send_message("Please describe in brief who you think this user is impersonating.")
+        await interaction.followup.send("Please describe in brief who you think this user is impersonating.")
         self.impersonation_type = ImpersonationType.SOMEONE_I_KNOW
         await self.disable_all_items()
         await self.get_additional_info()

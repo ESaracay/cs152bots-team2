@@ -8,6 +8,7 @@ async def next_message(timeout=60, channel = "", retries=3):
     # this is how we seperate different people talking to the same bot
     def check(m: discord.Message):
         if channel != "":
+            print("Handling next_message from channel:", m.channel)
             return m.channel.name == channel and m.author.name != "Group 2 Bot"
             # return True
         else:
