@@ -42,17 +42,17 @@ class ReportType(Enum):
     AUTOMATED = auto()
 
 class Moderation_Flow:
-
-    def __init__(self, message: discord.Message, mod_channel, automated=False, scam_score=0, reporter_id=0):
+    def __init__(self, message: discord.Message, mod_channel, automated=False, scam_score=0, reporter:discord.Member = None, guild:discord.Guild = None):
         if automated:
             self.state = State.GOOD_FAITH
             self.report_type = ReportType.AUTOMATED
             self.scam_score = 0
-
+            self.automated = True
         else:
             self.state = State.UNKNOWN_FAITH
             self.report_type = ReportType.USER_GENERATED
             self.scam_score = scam_score
+            self.automated = False
         self.mod_channel = mod_channel
         self.message = message
         self.author = message.author
@@ -61,7 +61,9 @@ class Moderation_Flow:
         self.impersonated = ""
         self.scam_type = ""
         self.incident_id = str(uuid.uuid4())
-        self.reporter_id = reporter_id
+        self.reporter = reporter
+        # self.reporter_id = reporter_id
+        self.guild = guild
     
     def dump_report_state(self):
         persistent_dump = {
@@ -70,7 +72,7 @@ class Moderation_Flow:
                 "incident_author_display_name": self.author.display_name,
                 "incident_author_id": str(self.author.id),
                 "incident_timestamp": str(self.message.created_at),
-                "incident_reporter_id": str(self.reporter_id),
+                "incident_reporter_id":  0 if self.automated else str(self.reporter.id),
                 "message_text": self.message.content,
                 "incident_scam_score": self.scam_score,
                 "impersonated_party": self.impersonated,
@@ -107,7 +109,7 @@ class Moderation_Flow:
 
     def lookup_bad_faith_reports(self):
         # look up bad faith reports collection, return count matching this user ID
-        num_bad_reports = find_bad_faith_reports(self.reporter_id)
+        num_bad_reports = find_bad_faith_reports(self.reporter.id)
         return num_bad_reports
 
     
@@ -117,6 +119,10 @@ class Moderation_Flow:
         prompts to offer at each of those states. You're welcome to change anything you want; this skeleton is just here to
         get you started and give you a model for working with Discord. 
         '''
+
+        await self.send_update_message(f'''Thank you for submitting your report. Our moderation team will begin reviewing this shortly.
+                                       For future reference, your report ID is: {self.incident_id}.
+                                       Our team will update you on the status of this report as soon as we can.''')
 
         if self.state == State.UNKNOWN_FAITH:
             await self.mod_channel.send("Did the user accurately follow the user reporting flow?")
@@ -208,25 +214,36 @@ class Moderation_Flow:
             print("Scam score:", self.scam_score)
             if self.scam_score == 1:
                 await self.send_warning_message()
+                await self.send_update_message("Our team has issued a warning to the user you reported. Thank you again for bringing this to our attention.")
             elif self.scam_score == 2:
                 await self.send_banning_message(1)
+                await self.send_update_message("Our team has issued a temporary ban to the user you reported. Thank you again for bringing this to our attention.")
             elif self.scam_score == 3:
                 await self.send_banning_message(7)
+                await self.send_update_message("Our team has issued a one week ban to the user you reported. Thank you again for bringing this to our attention.")
             elif self.scam_score == 4:
                 await self.send_permanent_banning_message()
+                await self.send_update_message("Our team has permanently banned the user you reported. Thank you again for bringing this to our attention.")
+
             self.state = State.COMPLETE
-
-
 
         if self.state == State.PUNITIVE_ACTION:
             await self.send_permanent_banning_message()
+            await self.send_update_message("Our team has permanently banned the user you reported. Thank you again for bringing this to our attention.")
+
             print("TODO: Offer reporting services to user")
             self.state = State.COMPLETE
 
         if self.state == State.COMPLETE:
             self.insert_moderation_report()
 
-
+    async def send_update_message(self, message_content: str):
+        # send message to self.reporter_id
+        # print("Attempting to send message to", self.reporter_id)
+        # print("Got recipient:", self.reporter, "from guild", self.guild)
+        if not self.automated:
+            await self.reporter.send(content=message_content)
+        
     async def send_warning_message(self):
         await self.message.author.send("Spam is not tolerated on this service. Further unsolicited or abusive messages may result in a temporary or permanent ban from this service.")
 

@@ -40,11 +40,13 @@ class ModBot(context.ContextClient, discord.Client):
         self.group_num = None
         self.mod_channels = {} # Map from guild to the mod channel id for that guild
         self.reports = {} # Map from user IDs to the state of their report
+        self.guild_ref = None
 
     async def on_ready(self):
         print(f'{self.user.name} has connected to Discord! It is these guilds:')
         for guild in self.guilds:
             print(f' - {guild.name}')
+            self.guild_ref = guild
         print('Press Ctrl-C to quit.')
 
         # Parse the group number out of the bot's name
@@ -121,7 +123,7 @@ class ModBot(context.ContextClient, discord.Client):
         mod_channel = self.mod_channels[message.guild.id]
         await mod_channel.send(mod_request.print_report())
         print("sending to mod flow with score:", mod_request.score)
-        mod_flow = Moderation_Flow(mod_request.message, mod_channel, automated=False, scam_score=mod_request.score, reporter_id=report.reporter_id)
+        mod_flow = Moderation_Flow(mod_request.message, mod_channel, automated=False, scam_score=mod_request.score, reporter = report.reporter, guild=self.guild_ref)
         await mod_flow.handle_moderation_report()
         
 
