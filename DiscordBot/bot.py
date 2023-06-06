@@ -138,9 +138,9 @@ class ModBot(context.ContextClient, discord.Client):
         mod_channel = self.mod_channels[message.guild.id]
         # Here we send the user a warning about why the message can be dangerous
         # TODO: change this back
-        # warning = gpt4_warning(message.content) 
+        warning = gpt4_warning(message.content) 
         print("Finished generating gpt4 response")
-        warning_message = "This message may be a possible scam. Take the following information into consideration: \n" #+ warning
+        warning_message = "This message may be a possible scam. Take the following information into consideration: \n" + warning
         await message.channel.send(warning_message, reference=message)
         print("warning message sending")
 
