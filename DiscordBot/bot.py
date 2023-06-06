@@ -119,8 +119,9 @@ class ModBot(context.ContextClient, discord.Client):
         message = report.message
         mod_channel = self.mod_channels[message.guild.id]
         await mod_channel.send(report.print_report())
-        mod_flow = Moderation_Flow(report.message, mod_channel)
-        mod_flow.handle_moderation_report()
+        print("sending to mod flow with score:", report.score)
+        mod_flow = Moderation_Flow(report.message, mod_channel, automated=False, scam_score=report.score)
+        await mod_flow.handle_moderation_report()
         
 
     async def check_channel_message(self, message):

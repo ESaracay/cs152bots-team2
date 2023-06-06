@@ -9,11 +9,14 @@ from question_templates.checking_scam import CheckingScam, ScamRequestType
 from question_templates.reliable_report import ReportIsReliable, ReportReliability
 from question_templates.impersonation import Impersonation, ImpersonationType
 
+import json
 import logging
+import uuid
+
 
 logger = logging.getLogger("Moderation-Flow")
 logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(filename='moderation.log', encoding='utf-8', mode='w')
+handler = logging.FileHandler(filename='moderation.log', encoding='utf-8', mode='a')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
@@ -38,20 +41,24 @@ class ReportType(Enum):
 
 class Moderation_Flow:
 
-    def __init__(self, message, mod_channel, automated=False):
+    def __init__(self, message: discord.Message, mod_channel, automated=False, scam_score=0):
         if automated:
             self.state = State.GOOD_FAITH
             self.report_type = ReportType.AUTOMATED
+            self.scam_score = 0
+
         else:
             self.state = State.UNKNOWN_FAITH
             self.report_type = ReportType.USER_GENERATED
+            self.scam_score = scam_score
         self.mod_channel = mod_channel
         self.message = message
-        self.scam_score = 0
+        self.author = message.author
         # record entity being impersonated
         self.impersonation_type = ImpersonationType.DEFAULT
         self.impersonated = ""
         self.scam_type = ""
+        self.incident_id = str(uuid.uuid4())
     
     async def handle_moderation_report(self):
         '''
@@ -72,7 +79,8 @@ class Moderation_Flow:
             await report_is_reliable.wait()
 
             if report_is_reliable.report_reliability == ReportReliability.GOOD:
-                self.scam_score += 1
+                if self.report_type == ReportType.AUTOMATED:
+                    self.scam_score += 1
                 self.state = State.GOOD_FAITH
             elif report_is_reliable.report_reliability == ReportReliability.BAD:
                 self.state = State.BAD_FAITH
@@ -94,26 +102,30 @@ class Moderation_Flow:
             msg = await self.mod_channel.send(view=impersonator)
 
             impersonator.message = msg
+            print("Got new message, current type is", impersonator.impersonation_type)
 
-            # get message from channel
             impersonated_msg = await next_message(channel=MOD_CHANNEL)
+            print("Got new message, current type is", impersonator.impersonation_type)
 
-            # here we should work on a queue to notify impersonated "agencies"
-            logger.debug(f"Report to: {impersonated_msg.content}")
-
-            print("impersonation type recorded:", impersonator.impersonation_type)
+            if (impersonator.impersonation_type not in [
+                ImpersonationType.CANCEL, ImpersonationType.DEFAULT, ImpersonationType.NEVERMIND
+            ]):
+                logger.debug(f"Report to: {impersonated_msg.content}")
+                print("impersonation type recorded:", impersonator.impersonation_type)
 
             if impersonator.impersonation_type == ImpersonationType.CANCEL:
-                await self.mod_channel.send("Report Canceled")
+                await self.mod_channel.send("Report Cancelled")
                 self.state = State.CANCELLED
             elif impersonator.impersonation_type == ImpersonationType.DEFAULT or impersonator.impersonation_type == ImpersonationType.NEVERMIND:
+                print("in type DEFAULT or NEVERMIND")
                 self.state = State.ASSESS_SCORE
             else:
                 print("If we're here we should be in state transition")
                 self.impersonation_type = impersonator.impersonation_type
                 self.impersonated = impersonated_msg.content
                 self.state = State.CREATE_REPORT
-                self.scam_score += 1
+                if self.report_type == ReportType.AUTOMATED:
+                    self.scam_score += 1
             print("Leaving GOOD_FAITH in state", self.state)
 
         if self.state == State.CREATE_REPORT:
@@ -128,19 +140,19 @@ class Moderation_Flow:
             self.scam_type = checking_scam.scam_type
 
             if checking_scam.scam_type == ScamRequestType.CANCEL:
-                await self.mod_channel.send("Report Canceled")
+                await self.mod_channel.send("Report Cancelled")
                 self.state = State.CANCELLED
             # User didn't ask for anything
             elif checking_scam.scam_type != ScamRequestType.NONE:
                 self.state = State.PUNITIVE_ACTION
             else:
                 # self.report.increment_score()
-                self.scam_score += 1
+                if self.report_type == ReportType.AUTOMATED:
+                    self.scam_score += 1
                 self.state = State.ASSESS_SCORE
 
         if self.state == State.ASSESS_SCORE:
-            # TODO: can we get score from original report? 
-            # for now, we can increment based on moderator flow
+            print("Scam score:", self.scam_score)
             if self.scam_score == 1:
                 await self.send_warning_message()
             elif self.scam_score == 2:
@@ -149,11 +161,29 @@ class Moderation_Flow:
                 await self.send_banning_message(7)
             elif self.scam_score == 4:
                 await self.send_permanent_banning_message()
+            self.state = State.COMPLETE
+
 
 
         if self.state == State.PUNITIVE_ACTION:
             await self.send_permanent_banning_message()
             print("TODO: Offer reporting services to user")
+            self.state = State.COMPLETE
+
+        if self.state == State.COMPLETE:
+            persistent_dump = {
+                "incident_id": self.incident_id,
+                "incident_author": self.author.name,
+                "incident_author_display_name": self.author.display_name,
+                "message_text": self.message.content,
+                "incident_scam_score": self.scam_score,
+                "impersonated_party": self.impersonated,
+                # "impersonation_type": self.impersonation_type
+            }
+            jsonified = json.dumps(persistent_dump)
+            logger.debug(jsonified)
+            print("Logged report:", jsonified)
+            print("Done!")
 
 
     async def send_warning_message(self):
