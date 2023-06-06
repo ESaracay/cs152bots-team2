@@ -4,7 +4,7 @@ import discord
 import re
 from discord.ext.context import ctx
 from message_util import next_message
-from mongo_client import insert_record
+from mongo_client import insert_record, find_bad_faith_reports
 from report import ModerationRequest 
 from question_templates.checking_scam import CheckingScam, ScamRequestType
 from question_templates.reliable_report import ReportIsReliable, ReportReliability
@@ -63,10 +63,7 @@ class Moderation_Flow:
         self.incident_id = str(uuid.uuid4())
         self.reporter_id = reporter_id
     
-    def insert_moderation_report(self):
-        if self.state != State.COMPLETE:
-            return
-        
+    def dump_report_state(self):
         persistent_dump = {
                 "incident_id": self.incident_id,
                 "incident_author": self.author.name,
@@ -79,12 +76,39 @@ class Moderation_Flow:
                 "impersonated_party": self.impersonated,
                 # "impersonation_type": self.impersonation_type
             }
+        if self.state == State.BAD_FAITH:
+            persistent_dump["bad_faith_report"] = True
+        else:
+            persistent_dump["bad_faith_report"] = False
+        return persistent_dump
+
+    def insert_moderation_report(self):
+        if self.state != State.COMPLETE:
+            return
+        
+        persistent_dump = self.dump_report_state()
         jsonified = json.dumps(persistent_dump)
 
         insert_record("moderation_reports", persistent_dump)
         logger.debug(jsonified)
         print("Logged report:", jsonified)
         print("Done!")
+
+    def insert_bad_faith_report(self):
+        if self.state != State.BAD_FAITH:
+            return
+        
+        persistent_dump = self.dump_report_state()
+        jsonified = json.dumps(persistent_dump)
+
+        insert_record("bad_faith_reports", persistent_dump)
+        logger.debug(jsonified)
+        print("Logged bad faith report:", jsonified)
+
+    def lookup_bad_faith_reports(self):
+        # look up bad faith reports collection, return count matching this user ID
+        num_bad_reports = find_bad_faith_reports(self.reporter_id)
+        return num_bad_reports
 
     
     async def handle_moderation_report(self):
@@ -118,7 +142,9 @@ class Moderation_Flow:
             await self.mod_channel.send("Checking the total number of bad faith reports submitted by this user")
             #TODO: Keep track of total number of bad faith reports based on message.author.id, so keep a database in a csv file or some datastruct like a map
             # for now, print username/id to console
-            self.send_banning_message(1)
+            self.insert_bad_faith_report()
+            if self.lookup_bad_faith_reports() > 1:
+                await self.send_banning_message(1)
             return
 
         if self.state == State.GOOD_FAITH:
